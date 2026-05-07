@@ -1,3 +1,4 @@
+#include "idt.h"
 #include <limine.h>
 #include <stdbool.h>
 #include <stddef.h>
