@@ -6,6 +6,7 @@
 #include "pic.h"
 #include "utils.h"
 #include "serial.h"
+#include "keyboard.h"
 
 volatile uint32_t *g_fb_ptr = NULL;
 size_t g_fb_width = 0;
@@ -112,6 +113,8 @@ void kmain(void) {
   disable_apic();    // Disable Local APIC so legacy PIC interrupts reach CPU
   pic_remap(32, 40);
   pic_clear_mask(0); // Unmask IRQ0 (Timer)
+  pic_clear_mask(1); // Unmask IRQ1 (Keyboard)
+  keyboard_init();
   pit_init(100);     // Set PIT to 100 Hz
   __asm__ volatile("sti");
   serial_puts("[boot] interrupts enabled\n");

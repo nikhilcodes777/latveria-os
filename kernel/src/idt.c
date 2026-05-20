@@ -60,6 +60,10 @@ void idt_init() {
   idt_set_descriptor(32, irq0_handler, 0x8E);
   vectors[32] = true;
 
+  extern void irq1_keyboard_handler(void);
+  idt_set_descriptor(33, irq1_keyboard_handler, 0x8E);
+  vectors[33] = true;
+
   __asm__ volatile("lidt %0" : : "m"(idtr)); // load the new IDT
   
   extern void serial_puts(const char *s);
