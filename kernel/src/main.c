@@ -5,6 +5,7 @@
 #include <stdint.h>
 #include "pic.h"
 #include "utils.h"
+#include "serial.h"
 
 volatile uint32_t *g_fb_ptr = NULL;
 size_t g_fb_width = 0;
@@ -73,14 +74,19 @@ static void hcf(void) {
 // If renaming kmain() to something else, make sure to change the
 // linker script accordingly.
 void kmain(void) {
+  serial_init();     // COM1 @ 38400 baud — debug output ready
+  serial_puts("[boot] serial OK\n");
+
   // Ensure the bootloader actually understands our base revision (see spec).
   if (LIMINE_BASE_REVISION_SUPPORTED(limine_base_revision) == false) {
+    serial_puts("[boot] FATAL: base revision not supported\n");
     hcf();
   }
 
   // Ensure we got a framebuffer.
   if (framebuffer_request.response == NULL ||
       framebuffer_request.response->framebuffer_count < 1) {
+    serial_puts("[boot] FATAL: no framebuffer\n");
     hcf();
   }
 
@@ -93,14 +99,13 @@ void kmain(void) {
   g_fb_height = framebuffer->height;
   g_fb_pitch = framebuffer->pitch;
 
-  // Print a nice pattern to screen as an example.
-  // Note: we assume the framebuffer model is RGB with 32-bit pixels.
-  for (size_t y = 0; y < framebuffer->height; y++) {
-    for (size_t x = 0; x < framebuffer->width; x++) {
-      uint32_t nX = x * 255 / framebuffer->width;
-      uint32_t nY = y * 255 / framebuffer->height;
-      g_fb_ptr[y * (framebuffer->pitch / 4) + x] = (nY << 16) | nX;
-    }
+  serial_printf("[boot] framebuffer: %ux%u pitch=%u bpp=%u\n",
+      (unsigned)g_fb_width, (unsigned)g_fb_height,
+      (unsigned)g_fb_pitch, (unsigned)framebuffer->bpp);
+
+  // Clear framebuffer to dark gray so we can tell if we booted
+  for (size_t i = 0; i < g_fb_height * (g_fb_pitch / 4); i++) {
+    g_fb_ptr[i] = 0x00222222;
   }
 
   idt_init();
@@ -109,6 +114,7 @@ void kmain(void) {
   pic_clear_mask(0); // Unmask IRQ0 (Timer)
   pit_init(100);     // Set PIT to 100 Hz
   __asm__ volatile("sti");
+  serial_puts("[boot] interrupts enabled\n");
 
   // We're done, just hang...
   hcf();

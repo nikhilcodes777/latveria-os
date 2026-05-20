@@ -23,7 +23,9 @@ void exception_handler(void) {
       }
     }
   }
-  __asm__ volatile("cli; hlt"); // Completely hangs the computer
+  for (;;) {
+    __asm__ volatile("cli; hlt"); // Completely hangs the computer
+  }
 }
 
 void idt_set_descriptor(uint8_t vector, void *isr, uint8_t flags) {
@@ -59,5 +61,8 @@ void idt_init() {
   vectors[32] = true;
 
   __asm__ volatile("lidt %0" : : "m"(idtr)); // load the new IDT
+  
+  extern void serial_puts(const char *s);
+  serial_puts("[idt] IDT loaded successfully\n");
   //__asm__ volatile("sti");                   // set the interrupt flag
 }
