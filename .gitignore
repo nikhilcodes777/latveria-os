@@ -2,3 +2,11 @@
 /edk2-ovmf
 *.iso
 *.hdd
+*.log
+iso_root/
+kernel/obj/
+kernel/bin/
+kernel/doomgeneric/
+libc_funcs.txt
+todo.md
+.gemini_staging/

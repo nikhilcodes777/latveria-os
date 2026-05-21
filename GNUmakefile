@@ -2,7 +2,7 @@
 .SUFFIXES:
 
 # Default user QEMU flags. These are appended to the QEMU command calls.
-QEMUFLAGS := -m 2G
+QEMUFLAGS := -m 2G -serial stdio
 
 override IMAGE_NAME := latveria-os
 
@@ -12,6 +12,9 @@ HOST_CFLAGS := -g -O2 -pipe
 HOST_CPPFLAGS :=
 HOST_LDFLAGS :=
 HOST_LIBS :=
+
+# Doom rendering scale (default 2). Override: make DOOM_SCALE=3 run
+DOOM_SCALE ?= 2
 
 .PHONY: all
 all: $(IMAGE_NAME).iso
@@ -69,12 +72,13 @@ kernel/.deps-obtained:
 
 .PHONY: kernel
 kernel: kernel/.deps-obtained
-	$(MAKE) -C kernel
+	$(MAKE) -C kernel DOOM_SCALE=$(DOOM_SCALE)
 
 $(IMAGE_NAME).iso: limine-binary/limine kernel
 	rm -rf iso_root
 	mkdir -p iso_root/boot
 	cp -v kernel/bin/kernel iso_root/boot/
+	cp -v doom1.wad iso_root/boot/
 	mkdir -p iso_root/boot/limine
 	cp -v limine.conf limine-binary/limine-bios.sys limine-binary/limine-bios-cd.bin limine-binary/limine-uefi-cd.bin iso_root/boot/limine/
 	mkdir -p iso_root/EFI/BOOT
@@ -96,6 +100,7 @@ $(IMAGE_NAME).hdd: limine-binary/limine kernel
 	mformat -i $(IMAGE_NAME).hdd@@1M
 	mmd -i $(IMAGE_NAME).hdd@@1M ::/EFI ::/EFI/BOOT ::/boot ::/boot/limine
 	mcopy -i $(IMAGE_NAME).hdd@@1M kernel/bin/kernel ::/boot
+	mcopy -i $(IMAGE_NAME).hdd@@1M doom1.wad ::/boot
 	mcopy -i $(IMAGE_NAME).hdd@@1M limine.conf limine-binary/limine-bios.sys ::/boot/limine
 	mcopy -i $(IMAGE_NAME).hdd@@1M limine-binary/BOOTX64.EFI ::/EFI/BOOT
 	mcopy -i $(IMAGE_NAME).hdd@@1M limine-binary/BOOTIA32.EFI ::/EFI/BOOT

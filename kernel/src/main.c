@@ -7,6 +7,7 @@
 #include "utils.h"
 #include "serial.h"
 #include "keyboard.h"
+#include "libc.h"
 
 volatile uint32_t *g_fb_ptr = NULL;
 size_t g_fb_width = 0;
@@ -61,8 +62,15 @@ __attribute__((used,
                section(".limine_requests_start"))) static volatile uint64_t
     limine_requests_start_marker[] = LIMINE_REQUESTS_START_MARKER;
 
+__attribute__((used, section(".limine_requests"))) static volatile struct limine_module_request
+    module_request = {.id = LIMINE_MODULE_REQUEST_ID, .revision = 0};
+
 __attribute__((used, section(".limine_requests_end"))) static volatile uint64_t
     limine_requests_end_marker[] = LIMINE_REQUESTS_END_MARKER;
+
+// Forward declare Doom functions
+void doomgeneric_Create(int argc, char **argv);
+void doomgeneric_Tick(void);
 
 // Halt and catch fire function.
 static void hcf(void) {
@@ -118,6 +126,45 @@ void kmain(void) {
   pit_init(100);     // Set PIT to 100 Hz
   __asm__ volatile("sti");
   serial_puts("[boot] interrupts enabled\n");
+
+  // Load WAD module
+  int wad_found = 0;
+  if (module_request.response != NULL) {
+    serial_printf("[boot] modules: %u found\n",
+        (unsigned)module_request.response->module_count);
+    for (uint64_t i = 0; i < module_request.response->module_count; i++) {
+        struct limine_file *mod = module_request.response->modules[i];
+        serial_printf("[boot] module[%u]: path='%s' size=%u\n",
+            (unsigned)i, mod->path ? mod->path : "(null)",
+            (unsigned)mod->size);
+        if (strstr(mod->path, "doom1.wad") != NULL ||
+            strstr(mod->path, "DOOM1.WAD") != NULL) {
+            set_wad_module(mod->address, mod->size);
+            wad_found = 1;
+            break;
+        }
+    }
+  } else {
+    serial_puts("[boot] Warning: module_request.response is NULL\n");
+  }
+
+  if (!wad_found) {
+    serial_puts("[boot] FATAL: doom1.wad not found in modules!\n");
+    // Paint screen red as visual error indicator
+    for (size_t i = 0; i < g_fb_height * (g_fb_pitch / 4); i++) {
+      g_fb_ptr[i] = 0x00FF0000;
+    }
+    hcf();
+  }
+
+  serial_puts("[boot] calling doomgeneric_Create...\n");
+  char *doom_argv[] = {"doom", "-iwad", "doom1.wad"};
+  doomgeneric_Create(3, doom_argv);
+
+  serial_puts("[boot] Starting Doom main loop\n");
+  while (1) {
+      doomgeneric_Tick();
+  }
 
   // We're done, just hang...
   hcf();

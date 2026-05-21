@@ -33,6 +33,10 @@ ifeq ($(TOOLCHAIN),llvm)
     LD := ld.lld
 endif
 
+# Doom rendering scale factor (320x200 * DOOM_SCALE).
+# Override on command line: make DOOM_SCALE=3
+DOOM_SCALE ?= 2
+
 # User controllable C flags.
 CFLAGS := -g -O2 -pipe
 
@@ -87,8 +91,13 @@ override CFLAGS += \
 # Internal C preprocessor flags that should not be changed by the user.
 override CPPFLAGS := \
     -I src \
+    -I src/include \
+    -I ../doomgeneric/doomgeneric \
     -I limine-protocol/include \
     -isystem freestnd-c-hdrs/include \
+    -DDOOM_SCALE=$(DOOM_SCALE) \
+    -DDOOMGENERIC_RESX='(320*$(DOOM_SCALE))' \
+    -DDOOMGENERIC_RESY='(200*$(DOOM_SCALE))' \
     $(CPPFLAGS) \
     -MMD \
     -MP
@@ -110,8 +119,12 @@ override LDFLAGS += \
 
 # Use "find" to glob all *.c, *.S, and *.asm files in the tree and obtain the
 # object and header dependency file names.
-override SRCFILES := $(shell find -L src cc-runtime/src -type f 2>/dev/null | LC_ALL=C sort)
-override CFILES := $(filter %.c,$(SRCFILES))
+override SRCFILES := $(shell find -L src cc-runtime/src ../doomgeneric/doomgeneric -type f 2>/dev/null | LC_ALL=C sort)
+override CFILES := $(filter-out ../doomgeneric/doomgeneric/doomgeneric_%.c \
+                   ../doomgeneric/doomgeneric/i_allegro%.c \
+                   ../doomgeneric/doomgeneric/i_sdl%.c \
+                   ../doomgeneric/doomgeneric/soso_%.c \
+                   ,$(filter %.c,$(SRCFILES)))
 override ASFILES := $(filter %.S,$(SRCFILES))
 override NASMFILES := $(filter %.asm,$(SRCFILES))
 override OBJ := $(addprefix obj/,$(CFILES:.c=.c.o) $(ASFILES:.S=.S.o) $(NASMFILES:.asm=.asm.o))
