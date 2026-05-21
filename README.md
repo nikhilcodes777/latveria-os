@@ -1,7 +1,8 @@
+
 # Latveria OS
 
 This repository contains source code for my `x86_64` os written with sole purpose of running `DOOM`.
-
+<img width="1280" height="830" alt="ss" src="https://github.com/user-attachments/assets/3e537752-22fb-493c-b2f3-4b9ea250f3bb" />
 ## How to use this?
 
 ### Dependencies
